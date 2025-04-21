@@ -5,10 +5,15 @@
 
 // <<< DÉFINISSEZ VOS NOMS D'UTILISATEUR ET MOTS DE PASSE VALIDES ICI >>>
 const validCredentials = [
-    { username: 'SoutaIshikawa', password: 'SoutaIshikawa4895' }
+    { username: 'SoutaIshikawa', password: 'SI4585' }
     // Ajoutez autant d'objets { username: '...', password: '...' } que nécessaire
 ];
 // ********************************************************
+
+// --- Configuration pour les Webhooks ---
+// <<< REMPLACEZ CECI PAR L'URL DE VOTRE WEBHOOK DISCORD >>>
+const discordWebhookUrl = 'https://discord.com/api/webhooks/1357643486480040000/4bbPWgI9HEyvaAJtCWpa23MOolJQg1TlzWrB-Bp-fU9WxlnCe6fA9gLPSiKCP1HemYbz'; // <-- Collez votre URL Discord ici
+// ****************************************
 
 const loginScreen = document.getElementById('login-screen');
 const salesBookContent = document.getElementById('sales-book-content');
@@ -104,10 +109,10 @@ function initializeSalesBook() {
         if (productSelect.value) {
              productProdPriceDisplay.textContent = `$${prodPrice.toFixed(2)}`;
              productSellPriceDisplay.textContent = `$${sellPrice.toFixed(2)}`;
-        } else {
+         } else {
              productProdPriceDisplay.textContent = ''; // Clear if no product selected
              productSellPriceDisplay.textContent = ''; // Clear if no product selected
-        }
+         }
 
         rowAmountDisplay.textContent = `$${amount.toFixed(2)}`;
         rowProfitDisplay.textContent = `$${profit.toFixed(2)}`; // KEEP: Update row profit display
@@ -124,7 +129,7 @@ function initializeSalesBook() {
 
              totalAmount += parseFloat(rowAmountDisplay.textContent.replace('$', '')) || 0;
              totalProfit += parseFloat(rowProfitDisplay.textContent.replace('$', '')) || 0; // Sum displayed profit
-        });
+         });
 
         // Update total displays on the page
         totalAmountDisplay.textContent = `$${totalAmount.toFixed(2)}`;
@@ -151,8 +156,9 @@ function initializeSalesBook() {
     });
 
 
-    // --- Google Sheets Integration Logic ---
+    // --- Integration Logic ---
 
+    // This version gets salesperson name from an element, not a select dropdown
     const salespersonNameElement = document.getElementById('salesperson-name');
     const currentDateElement = document.getElementById('current-date');
     const currentTimeElement = document.getElementById('current-time');
@@ -160,7 +166,9 @@ function initializeSalesBook() {
 
     if (validateButton) {
         validateButton.addEventListener('click', () => {
-            const salesperson = salespersonNameElement.textContent.trim();
+            // Get salesperson name from the designated element
+            const salesperson = salespersonNameElement ? salespersonNameElement.textContent.trim() : 'Inconnu'; // Added check
+
             const saleDate = currentDateElement.textContent.trim();
             const saleTime = currentTimeElement.textContent.trim();
 
@@ -168,15 +176,15 @@ function initializeSalesBook() {
             calculateTotal();
 
             const totalAmount = currentTotalAmount; // Use the value stored in the variable
-            const totalProfit = currentTotalProfit; // Use the total profit value (even if not displayed)
+            const totalProfit = currentTotalProfit; // Use the total profit value
 
 
-            // Check if there are any items selected with quantity > 0 or if total amount > 0
-            const hasSelectedItems = Array.from(document.querySelectorAll('tbody tr')).some(row => {
-                 const productSelect = row.querySelector('.product-select');
-                 const quantityInput = row.querySelector('.quantity-input');
-                 return productSelect.value && parseInt(quantityInput.value) > 0;
-             });
+             // Check if there are any items selected with quantity > 0 or if total amount > 0
+             const hasSelectedItems = Array.from(document.querySelectorAll('tbody tr')).some(row => {
+                  const productSelect = row.querySelector('.product-select');
+                  const quantityInput = row.querySelector('.quantity-input');
+                  return productSelect.value && parseInt(quantityInput.value) > 0;
+               });
 
              // Also check if total amount is 0, even if items are selected (e.g. free items)
              if (!hasSelectedItems && totalAmount <= 0) {
@@ -185,74 +193,124 @@ function initializeSalesBook() {
              }
 
 
-            // Créer un objet avec les données de résumé à envoyer
-            // Inclure la Marge_Totale car elle est envoyée à Google Sheets
-            const summaryDataToSend = {
+            // Créer un objet avec les données de résumé
+            const summaryData = {
                 Date: saleDate,
                 Heure: saleTime,
                 Vendeur: salesperson,
                 Chiffre_Affaire: totalAmount,
-                Marge_Totale: totalProfit // Inclure la marge totale pour Google Sheets
+                Marge_Totale: totalProfit
             };
 
-            console.log('Données sommaires à envoyer :', summaryDataToSend);
+            console.log('Données sommaires à envoyer :', summaryData);
 
+
+            // --- Envoi à Google Sheets ---
             const googleSheetsUrl = 'https://script.google.com/macros/s/AKfycbzIZaXY4OmtqM4j67REJq1c9YbvGUnJZE2qgc2vfhIpRmD8v_dBK-IW09qaOB2s6n_OTw/exec'; // <<< REMPLACEZ CECI PAR VOTRE URL Apps Script
 
-            if (googleSheetsUrl === 'YOUR_APPS_SCRIPT_WEB_APP_URL') {
-                 alert("Erreur de configuration : Veuillez remplacer 'YOUR_APPS_SCRIPT_WEB_APP_URL' dans le script par l'URL de votre Web App Google Apps Script.");
-                 return;
+             if (googleSheetsUrl === 'YOUR_APPS_SCRIPT_WEB_APP_URL' || !googleSheetsUrl) {
+                 alert("Erreur de configuration : L'URL Google Sheets n'est pas configurée correctement.");
+                 // Optionally return here if Google Sheets is mandatory,
+                 // but for now, we'll just log and proceed to Discord if configured.
+                 console.error("Google Sheets URL not configured.");
+             } else {
+                 fetch(googleSheetsUrl, {
+                     method: 'POST',
+                     mode: 'no-cors', // Use 'no-cors' for Google Apps Script Web App
+                     headers: {
+                         'Content-Type': 'application/json'
+                     },
+                     body: JSON.stringify(summaryData) // Envoyez l'objet JSON résumé
+                 })
+                 .then(response => {
+                      console.log('Réponse Google Sheets reçue (mode no-cors, réponse opaque):', response);
+                      alert('Sélection validée. Données envoyées à Google Sheets (vérifiez la feuille pour confirmation) !');
+
+                      // Optional: Clear the form after assumed successful submission
+                      document.querySelectorAll('.quantity-input').forEach(input => input.value = 0);
+                      document.querySelectorAll('.product-select').forEach(select => select.value = '');
+                      document.querySelectorAll('tbody tr').forEach(row => calculateRowAmount(row)); // Recalculate to reset displays
+                      calculateTotal(); // Recalculate totals to show $0.00
+                      // Update date and time for the next transaction
+                      updateDateTime();
+
+                 })
+                 .catch((error) => {
+                     console.error('Erreur lors de l\'envoi des données à Google Sheets:', error);
+                     alert('Échec de l\'envoi des données à Google Sheets. Vérifiez la console, la configuration Apps Script et l\'URL.');
+                 });
+             }
+
+
+            // --- Envoi à Discord via Webhook ---
+            if (discordWebhookUrl === 'YOUR_DISCORD_WEBHOOK_URL' || !discordWebhookUrl) {
+                console.warn("Discord Webhook URL not configured. Skipping Discord notification.");
+            } else {
+                const discordPayload = {
+                    // You can customize the message format here using Markdown
+                    content: `**Nouvelle Vente Validée**:\n` +
+                             `> **Date:** ${summaryData.Date}\n` +
+                             `> **Heure:** ${summaryData.Heure}\n` +
+                             `> **Vendeur:** ${summaryData.Vendeur}\n` +
+                             `> **Chiffre d'Affaire:** $${summaryData.Chiffre_Affaire.toFixed(2)}\n` +
+                             `> **Marge Totale:** $${summaryData.Marge_Totale.toFixed(2)}`,
+                    // Optional: customize the username and avatar
+                    // username: 'Sales Bot',
+                    // avatar_url: 'URL_DE_VOTRE_ICONE'
+                };
+
+                console.log('Données à envoyer à Discord :', discordPayload);
+
+                fetch(discordWebhookUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(discordPayload)
+                })
+                .then(response => {
+                    if (response.ok) { // Discord webhook success returns 204 No Content, which response.ok handles
+                        console.log('Données envoyées à Discord avec succès !');
+                        // No alert needed for Discord success typically
+                    } else {
+                        console.error('Erreur lors de l\'envoi des données à Discord. Statut :', response.status);
+                        // Attempt to read response body for more info, but Discord might return empty
+                        response.text().then(text => console.error('Corps de l\'erreur Discord (si disponible) :', text || 'Empty response body'));
+                        // No alert needed for Discord failure, just console log
+                    }
+                })
+                .catch((error) => {
+                    console.error('Erreur réseau lors de l\'envoi à Discord:', error);
+                    // No alert needed for Discord failure, just console log
+                });
             }
+            // Note: The Sheets fetch includes UI updates (clearing form, updating time)
+            // so let's keep that as the primary success indicator for the user.
+            // The Discord fetch runs in parallel or slightly after the Sheets fetch is initiated.
 
-
-            fetch(googleSheetsUrl, {
-                method: 'POST',
-                mode: 'no-cors', // Use 'no-cors'
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(summaryDataToSend) // Envoyez l'objet JSON résumé
-            })
-            .then(response => {
-                 console.log('Réponse reçue (mode no-cors, réponse opaque):', response);
-                 alert('Sélection validée. Données envoyées à Google Sheets (vérifiez la feuille pour confirmation) !');
-
-                 // Optional: Clear the form after assumed successful submission
-                 document.querySelectorAll('.quantity-input').forEach(input => input.value = 0);
-                 document.querySelectorAll('.product-select').forEach(select => select.value = '');
-                 document.querySelectorAll('tbody tr').forEach(row => calculateRowAmount(row)); // Recalculate to reset displays
-                 calculateTotal(); // Recalculate totals to show $0.00
-                 // Update date and time for the next transaction
-                 updateDateTime();
-
-            })
-            .catch((error) => {
-                console.error('Erreur lors de l\'envoi des données:', error);
-                alert('Échec de l\'envoi des données. Vérifiez la console, la configuration Apps Script et l\'URL.');
-            });
         });
     } else {
-         console.error("Validation button not found!");
+          console.error("Validation button not found!");
     }
 
 
     // Function to update date and time
     function updateDateTime() {
-         const now = new Date();
-         const day = String(now.getDate()).padStart(2, '0');
-         const month = String(now.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
-         const year = now.getFullYear();
-         const hours = String(now.getHours()).padStart(2, '0');
-         const minutes = String(now.getMinutes()).padStart(2, 0);
-         const seconds = String(now.getSeconds()).padStart(2, 0);
+          const now = new Date();
+          const day = String(now.getDate()).padStart(2, '0');
+          const month = String(now.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
+          const year = now.getFullYear();
+          const hours = String(now.getHours()).padStart(2, '0');
+          const minutes = String(now.getMinutes()).padStart(2, 0);
+          const seconds = String(now.getSeconds()).padStart(2, 0);
 
-         if(currentDateElement) currentDateElement.textContent = `${day}/${month}/${year}`;
-         if(currentTimeElement) currentTimeElement.textContent = `${hours}:${minutes}:${seconds}`;
+          if(currentDateElement) currentDateElement.textContent = `${day}/${month}/${year}`;
+          if(currentTimeElement) currentTimeElement.textContent = `${hours}:${minutes}:${seconds}`;
     }
 
     // Initial calculation and date/time set
      document.querySelectorAll('tbody tr').forEach(row => {
-         calculateRowAmount(row); // Calculate row amounts and profits
+          calculateRowAmount(row); // Calculate row amounts and profits
      });
      calculateTotal(); // Calculate total amount and total profit, update displays and variables
     updateDateTime();
