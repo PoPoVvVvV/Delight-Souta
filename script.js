@@ -206,7 +206,7 @@ function initializeSalesBook() {
 
 
             // --- Envoi à Google Sheets ---
-            const googleSheetsUrl = 'https://script.google.com/macros/s/AKfycbzIZaXY4OmtqM4j67REJq1c9YbvGUnJZE2qgc2vfhIpRmD8v_dBK-IW09qaOB2s6n_OTw/exec'; // <<< REMPLACEZ CECI PAR VOTRE URL Apps Script
+            const googleSheetsUrl = 'https://script.google.com/macros/s/AKfycbycEBCzB1TTT6oAa4wXD6N8vR1fUxS58U_wFA9H_YtO6jdDz2nr-YpW14p7S9FqGqP-jg/exec'; // <<< REMPLACEZ CECI PAR VOTRE URL Apps Script
 
              if (googleSheetsUrl === 'YOUR_APPS_SCRIPT_WEB_APP_URL' || !googleSheetsUrl) {
                  alert("Erreur de configuration : L'URL Google Sheets n'est pas configurée correctement.");
