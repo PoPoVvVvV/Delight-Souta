@@ -87,6 +87,7 @@ const validCredentials = [
         const quantityInputs = document.querySelectorAll('.quantity-input');
         const totalAmountDisplay = document.getElementById('total-amount');
         const totalProfitDisplay = document.getElementById('total-profit'); // Keep this to update display
+        const discountCheckbox = document.getElementById('discount-checkbox');
 
 
         function calculateRowAmount(row) {
@@ -121,36 +122,59 @@ const validCredentials = [
         }
 
         function calculateTotal() {
-            let totalAmount = 0;
-            let totalProfit = 0;
-
-            // Loop through each row to sum displayed amount and profit
-             document.querySelectorAll('tbody tr').forEach(row => {
-                 const rowAmountDisplay = row.querySelector('.row-amount');
-                 const rowProfitDisplay = row.querySelector('.row-profit'); // Get profit display
-
-                 // Ensure elements exist and content is valid before parsing
-                 const rowAmount = rowAmountDisplay ? parseFloat(rowAmountDisplay.textContent.replace('$', '')) || 0 : 0;
-                 const rowProfit = rowProfitDisplay ? parseFloat(rowProfitDisplay.textContent.replace('$', '')) || 0 : 0;
-
-                 totalAmount += rowAmount;
-                 totalProfit += rowProfit; // Sum displayed profit
-             });
-
-            // Update total displays on the page
-            if(totalAmountDisplay) totalAmountDisplay.textContent = `$${totalAmount.toFixed(2)}`;
-            if(totalProfitDisplay) totalProfitDisplay.textContent = `$${totalProfit.toFixed(2)}`; // KEEP: Update total profit display
-
-            // Store totals in variables accessible by the fetch call
-            currentTotalAmount = totalAmount;
-            currentTotalProfit = totalProfit; // Store total profit value
-        }
+                let totalAmount = 0; // Variable pour le total brut avant réduction
+                let totalProfit = 0; // Variable pour le profit total (pas affecté par la réduction)
+            
+                // Boucle sur chaque ligne du tableau pour additionner les montants et profits
+                document.querySelectorAll('tbody tr').forEach(row => {
+                    const rowAmountDisplay = row.querySelector('.row-amount');
+                    const rowProfitDisplay = row.querySelector('.row-profit');
+            
+                    // Récupère les valeurs affichées et les convertit en nombres
+                    const rowAmount = rowAmountDisplay ? parseFloat(rowAmountDisplay.textContent.replace('$', '')) || 0 : 0;
+                    const rowProfit = rowProfitDisplay ? parseFloat(rowProfitDisplay.textContent.replace('$', '')) || 0 : 0;
+            
+                    totalAmount += rowAmount; // Ajoute au total brut
+                    totalProfit += rowProfit; // Ajoute au profit total
+                });
+            
+                // --- SECTION POUR LA RÉDUCTION ---
+                let discountedAmount = totalAmount; // Initialise le montant facturable avec le total brut
+                // Récupère la case à cocher
+                const discountCheckbox = document.getElementById('discount-checkbox');
+                // Applique 10% de réduction si la case à cocher existe et EST cochée
+                if (discountCheckbox && discountCheckbox.checked) {
+                    discountedAmount = totalAmount * 0.9; // Applique la réduction
+                }
+                // --- FIN SECTION ---
+            
+                // --- NOUVEL AJOUT : Arrondir le montant facturable au supérieur ---
+                const roundedAmount = Math.ceil(discountedAmount); // Arrondit toujours à l'entier supérieur
+                // --- FIN NOUVEL AJOUT ---
+            
+            
+                // Met à jour l'affichage des totaux sur la page
+                const totalAmountDisplay = document.getElementById('total-amount'); // Récupère l'élément d'affichage du total à facturer
+                const totalProfitDisplay = document.getElementById('total-profit'); // Récupère l'élément d'affichage du profit total
+            
+                if(totalAmountDisplay) totalAmountDisplay.textContent = `$${roundedAmount.toFixed(0)}`; // Affiche le montant arrondi avec 0 décimale
+                if(totalProfitDisplay) totalProfitDisplay.textContent = `$${totalProfit.toFixed(2)}`; // Affiche le profit total (pas réduit ni arrondi)
+            
+                // Stocke les totaux dans des variables globales pour qu'ils soient accessibles par la fonction d'envoi
+                currentTotalAmount = roundedAmount; // IMPORTANT : Stocke le montant final facturable (arrondi au supérieur)
+                currentTotalProfit = totalProfit; // IMPORTANT : Stocke le profit total (pas réduit ni arrondi)
+            }
 
         // Add event listeners for select and input changes (only once per element)
         const handleSalesBookChange = (event) => {
              calculateRowAmount(event.target.closest('tr'));
              calculateTotal();
            };
+
+           const checkboxForListener = document.getElementById('discount-checkbox');
+           if (checkboxForListener) {
+                checkboxForListener.addEventListener('change', calculateTotal);
+           }
 
         document.querySelectorAll('.product-select, .quantity-input').forEach(element => {
             // Add listeners only if not added before
