@@ -192,3 +192,15 @@ td select option {
  .info-container span {
      margin-left: 15px;
  }
+
+ .info-container label[for="discount-checkbox"] {
+    display: inline-block;
+    margin-right: 5px;
+    font-weight: normal;
+    color: var(--light-text);
+ }
+
+ .info-container input[type="checkbox"] {
+    vertical-align: middle;
+    margin-right: 15px;
+ }
